@@ -1,6 +1,7 @@
 module Main where
 
+import Sigma
 
 
 main::IO()
-main = undefined
+main = print (execute example1)

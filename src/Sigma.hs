@@ -107,14 +107,14 @@ getFuncBodyFromObject (Object (FuncDef (funcName, body):fds)) name = if (funcNam
                                                 
 
 
-exampleTerm1 = Object [FuncDef ("s" , FuncBody "self" (Object []))]
-exampleTerm2 = Var "a"
-exampleTerm3 = Override (Object [FuncDef ("s" , FuncBody "self" (Object []))]) "s" (FuncBody "selfname" (Object[])) 
-exampleTerm4 = Invocation (Override (Object [FuncDef ("s" , FuncBody "self" (Object []))]) "s" (FuncBody "selfname" (Object[]))) "s" 
+example1 = Object [FuncDef ("s" , FuncBody "self" (Object []))]
+example2 = Var "a"
+example3 = Override (Object [FuncDef ("s" , FuncBody "self" (Object []))]) "s" (FuncBody "selfname" (Object[])) 
+example4 = Invocation (Override (Object [FuncDef ("s" , FuncBody "self" (Object []))]) "s" (FuncBody "selfname" (Object[]))) "s" 
 
 execute t = runEval newReader newState (eval t)
 
 getEnv :: Env
-getEnv = Map.fromList [("a",exampleTerm1), ("b",exampleTerm2), ("c",exampleTerm3)]
+getEnv = Map.fromList [("a",example1), ("b",example2), ("c",example3)]
 
 
