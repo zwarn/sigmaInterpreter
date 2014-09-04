@@ -15,16 +15,35 @@ main::IO()
 main = runRepl
 
 runRepl :: IO ()
-runRepl = parseEvalLoop (readPrompt "Sigma>>> ")
+runRepl = parseEvalLoop (readPrompt "Sigma>>> ") newReader newState
 
-parseEvalLoop :: (IO String) -> IO()
-parseEvalLoop promt = do
+parseEvalLoop :: (IO String) -> ReaderType -> StateType -> IO()
+parseEvalLoop promt log state = do
    codeLine <- promt
    if codeLine == "quit"
       then return ()
-      else let result = evalAndPrint codeLine in
-                do result
-                   parseEvalLoop promt
+      else do
+           let parsed = parseString codeLine
+           case parsed of
+           { Left err -> do print err
+                            parseEvalLoop promt log state
+           ; Right ans -> do 
+                          let result = evaluate2 log state ans
+                          let (newlog, newstate) = getNewStateFromResult log state result
+                          parseEvalLoop promt newlog newstate            
+           }
+           
+           
+                
+
+evaluate2 :: ReaderType -> StateType -> Term -> ResultType Term
+evaluate2 log state term = runEval log state (eval term)
+                
+getNewStateFromResult :: ReaderType -> StateType -> ResultType Term -> (ReaderType, StateType)
+getNewStateFromResult log state result = (log, state)               
+
+parseString :: String -> Either ParseError Term
+parseString string = parse termparser "" string
                    
 evalAndPrint :: String -> IO ()
 evalAndPrint expr =  parseInput expr
