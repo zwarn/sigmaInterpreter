@@ -9,37 +9,65 @@ import Functors
 import SubType
 import Control.Monad
  
---type Value = ResultType Term
+type Value = SigmaObject
   
 --instance Show Value where
 --        show ((Left error, log), state) = show error
 --        show ((Right term, log), state) = show term
 
 type Name = String
-data ExprSigma e = Object [FuncDef e]
-                 | Var Name
-                 | Invocation e Name
-                 | Override e Name (FuncBody e)
-                 
-data FuncDef e = FuncDef (String, FuncBody e) 
 
-data FuncBody e = FuncBody String e    
+data SigmaObject        = Object [FuncDef]
+                                  
+data FuncDef            = FuncDef (String, FuncBody) 
 
-instance Functor ExprSigma where
-    fmap f (Invocation term name) = (Invocation (f term) name)
-    fmap f (Override term name funcbody) = (Override (f term) name funcbody)
-    fmap f x = x
+data FuncBody           = FuncBody String SigmaObject
+
+data ObjectExpr a       = ObjectExpr a
+
+instance Functor ObjectExpr where
+         fmap f (ObjectExpr o) = (ObjectExpr (f o))
     
-instance Algebra ExprSigma AlgSigma a where
-    apply alg x@(Object _)              = (object alg x)
-    apply alg x@(Var _)                 = (lookupVar alg x)
-    apply alg x@(Invocation _ _)        = (invocation alg x)
-    apply alg x@(Override _ _ _)        = (override alg x)
+instance Algebra ObjectExpr AlgObject a where
+         apply alg x@(ObjectExpr _)          = (object alg x)
       
-data AlgSigma t = AlgSigma     {object         :: (ExprSigma t) -> t,
-                                lookupVar      :: (ExprSigma t) -> t,  
-                                invocation     :: (ExprSigma t) -> t,  
-                                override       :: (ExprSigma t) -> t}  
+data AlgObject t = AlgObject   {object         :: (ObjectExpr t) -> t}  
+
+phiObject :: ObjectExpr t -> t
+phiObject (ObjectExpr o) = o
+
+data FuncExpr a         = Invocation a Name
+                        | Override a Name FuncBody
+                        
+instance Functor FuncExpr where
+        fmap f (Invocation term name)           = (Invocation (f term) name)
+        fmap f (Override term name funcbody)    = (Override (f term) name funcbody)
+        
+instance Algebra FuncExpr AlgFunc a where
+        apply alg x@(Invocation _ _) = invocation alg x
+        apply alg x@(Override _ _ _) = override alg x
+        
+data AlgFunc t = AlgFunc        {invocation :: (FuncExpr t) -> t,
+                                 override   :: (FuncExpr t) -> t}
+                                 
+phiInvocation :: (FuncExpr t) -> t
+phiInvocation (Invocation term name) = term
+
+phiOverride :: (FuncExpr t) -> t
+phiOverride (Override term name funcbody) = term
+
+                                         
+type TermType = (ObjectExpr :$: FuncExpr)
+type TermLang = Fix TermType                                      
+
+termAlg = (AlgObject phiObject) 
+                @+@ (AlgFunc phiInvocation phiOverride)
+                
+eval = cata termAlg
+
+mkEObject v = inn $ sleft $ ObjectExpr v
+
+term1 = mkEObject (Object [])              
   
 sright = S . Right
 
