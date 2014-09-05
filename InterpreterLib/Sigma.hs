@@ -23,51 +23,37 @@ data FuncDef            = FuncDef (String, FuncBody)
 
 data FuncBody           = FuncBody String SigmaObject
 
-data ObjectExpr a       = ObjectExpr a
+data SigmaExpr a        = SExpr (Term a)
+data Term a             = SigmaObject
+                        | Invocation a Name
+                        | Override a Name FuncDef
 
-instance Functor ObjectExpr where
-         fmap f (ObjectExpr o) = (ObjectExpr (f o))
-    
-instance Algebra ObjectExpr AlgObject a where
-         apply alg x@(ObjectExpr _)          = (object alg x)
-      
-data AlgObject t = AlgObject   {object         :: (ObjectExpr t) -> t}  
-
-phiObject :: ObjectExpr t -> t
-phiObject (ObjectExpr o) = o
-
-data FuncExpr a         = Invocation a Name
-                        | Override a Name FuncBody
-                        
-instance Functor FuncExpr where
+instance Functor SigmaExpr where
+        fmap f (SExpr term) = (SExpr (fmap f term))
+         
+instance Functor Term where
+        fmap f x@(SigmaObject)                  = f x
         fmap f (Invocation term name)           = (Invocation (f term) name)
-        fmap f (Override term name funcbody)    = (Override (f term) name funcbody)
-        
-instance Algebra FuncExpr AlgFunc a where
-        apply alg x@(Invocation _ _) = invocation alg x
-        apply alg x@(Override _ _ _) = override alg x
-        
-data AlgFunc t = AlgFunc        {invocation :: (FuncExpr t) -> t,
-                                 override   :: (FuncExpr t) -> t}
-                                 
-phiInvocation :: (FuncExpr t) -> t
-phiInvocation (Invocation term name) = term
+        fmap f (Override term name funcdef)     = (Override (f term) name funcdef)       
+    
+instance Algebra SigmaExpr AlgSigma a where
+         apply alg x@(SExpr expr)          = (sigma alg x)
+      
+data AlgSigma t = AlgSigma   {sigma :: (SigmaExpr t) -> t}  
 
-phiOverride :: (FuncExpr t) -> t
-phiOverride (Override term name funcbody) = term
-
+phiSigma :: SigmaExpr t -> t
+phiSigma (SExpr o) = o
                                          
-type TermType = (ObjectExpr :$: FuncExpr)
+type TermType = (SigmaExpr)
 type TermLang = Fix TermType                                      
 
-termAlg = (AlgObject phiObject) 
-                @+@ (AlgFunc phiInvocation phiOverride)
+termAlg = (AlgSigma phiSigma) 
                 
 eval = cata termAlg
 
-mkEObject v = inn $ sleft $ ObjectExpr v
+mkEObject v = inn $ sleft $ SExpr v
 
-term1 = mkEObject (Object [])              
+--term1 = mkEObject (Object [])  
   
 sright = S . Right
 
