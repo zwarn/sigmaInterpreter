@@ -24,7 +24,7 @@ data FuncDef            = FuncDef (String, FuncBody)
 data FuncBody           = FuncBody String SigmaObject
 
 data SigmaExpr a        = SExpr (Term a)
-data Term a             = SigmaObject
+data Term a             = SObj SigmaObject
                         | Invocation a Name
                         | Override a Name FuncDef
 
@@ -32,7 +32,7 @@ instance Functor SigmaExpr where
         fmap f (SExpr term) = (SExpr (fmap f term))
          
 instance Functor Term where
-        fmap f x@(SigmaObject)                  = f x
+        fmap f x@(SObj object)                  = (SObj object)
         fmap f (Invocation term name)           = (Invocation (f term) name)
         fmap f (Override term name funcdef)     = (Override (f term) name funcdef)       
     
@@ -42,7 +42,9 @@ instance Algebra SigmaExpr AlgSigma a where
 data AlgSigma t = AlgSigma   {sigma :: (SigmaExpr t) -> t}  
 
 phiSigma :: SigmaExpr t -> t
-phiSigma (SExpr o) = o
+phiSigma (SExpr (Invocation term name)) = term
+phiSigma (SExpr (Override term name funcdef)) = term
+phiSigma (SExpr (SObj object)) = object
                                          
 type TermType = (SigmaExpr)
 type TermLang = Fix TermType                                      
@@ -53,7 +55,7 @@ eval = cata termAlg
 
 mkEObject v = inn $ sleft $ SExpr v
 
---term1 = mkEObject (Object [])  
+term1 = mkEObject (SObj (Object []))
   
 sright = S . Right
 
